@@ -20,6 +20,12 @@ Refer to technology-specific instruction files:
 
 ## Core Principles
 
+### Comments and Component Documentation
+
+- Explain intent and design decisions, not mechanics. Avoid comments that repeat the HTML, class names, or expression they sit beside.
+- Keep comments concise and current; update or remove them when the related component behavior changes.
+- Every reusable `.astro` component must document its `Props` interface so callers can understand the component contract without reading its implementation.
+
 ### Testability
 
 - Every interactive element MUST include a `data-testid` attribute
