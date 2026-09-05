@@ -6,6 +6,7 @@ import {
     getAllGames,
     getAllGameIds,
     getGameById,
+    getFilteredGames,
 } from './games';
 
 async function seedGames(db: Database, count: number): Promise<void> {
@@ -62,5 +63,42 @@ describe('games data-access helpers', () => {
     it('returns null for a non-existent game', async () => {
         await seedGames(db, 2);
         expect(await getGameById(db, 99999)).toBeNull();
+    });
+
+    it('filters games by one or more categories and publisher together', async () => {
+        const [strategy] = await db
+            .insert(categories)
+            .values({ name: 'Strategy', description: 'strategy' })
+            .returning({ id: categories.id });
+        const [party] = await db
+            .insert(categories)
+            .values({ name: 'Party', description: 'party' })
+            .returning({ id: categories.id });
+        const [publisher] = await db
+            .insert(publishers)
+            .values({ name: 'Pub One', description: 'pub' })
+            .returning({ id: publishers.id });
+        const [otherPublisher] = await db
+            .insert(publishers)
+            .values({ name: 'Pub Two', description: 'pub' })
+            .returning({ id: publishers.id });
+
+        await db.insert(games).values([
+            { title: 'Strategy One', description: 'one', categoryId: strategy.id, publisherId: publisher.id },
+            { title: 'Party One', description: 'two', categoryId: party.id, publisherId: publisher.id },
+            { title: 'Strategy Two', description: 'three', categoryId: strategy.id, publisherId: otherPublisher.id },
+        ]);
+
+        const filtered = await getFilteredGames(db, {
+            categoryIds: [party.id, strategy.id],
+            publisherId: publisher.id,
+        });
+        expect(filtered.map((game) => game.title)).toEqual(['Party One', 'Strategy One']);
+    });
+
+    it('returns all games in title order when no filters are selected', async () => {
+        await seedGames(db, 3);
+        const filtered = await getFilteredGames(db);
+        expect(filtered.map((game) => game.title)).toEqual(['Game 01', 'Game 02', 'Game 03']);
     });
 });
