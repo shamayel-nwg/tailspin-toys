@@ -24,6 +24,35 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should filter games by category and publisher with shareable URL state', async ({ page }) => {
+    await page.goto('/');
+    const gamesGrid = page.getByTestId('games-grid');
+    await expect(gamesGrid).toBeVisible();
+    const initialCount = await page.getByTestId('game-card').count();
+
+    await test.step('Select a category and verify the catalog updates', async () => {
+      const categoryFilter = page.locator('input[name="category"]').first();
+      await categoryFilter.check();
+      await expect(page).toHaveURL(/[?&]category=\d+/);
+      await expect(page.getByTestId('filter-result-count')).toContainText('shown');
+      expect(await page.getByTestId('game-card').evaluateAll((cards) => cards.filter((card) => !card.classList.contains('hidden')).length)).toBeLessThanOrEqual(initialCount);
+    });
+
+    await test.step('Combine the category with a publisher filter', async () => {
+      const publisherFilter = page.getByTestId('publisher-filter');
+      await publisherFilter.selectOption({ index: 1 });
+      await expect(page).toHaveURL(/[?&]publisher=\d+/);
+      await expect(page.getByTestId('filter-result-count')).toContainText('shown');
+    });
+
+    await test.step('Clear filters and restore the full catalog', async () => {
+      await page.getByTestId('clear-filters').click();
+      await expect(page).toHaveURL('/');
+      await expect(page.getByTestId('filter-result-count')).toHaveText(`${initialCount} games shown`);
+      await expect(page.getByTestId('game-card').first()).toBeVisible();
+    });
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
